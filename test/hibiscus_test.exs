@@ -1,7 +1,11 @@
 defmodule HibiscusTest do
   use ExUnit.Case
 
-  test "get_file_info returns file info if passed a file" do
-    assert Hibiscus.get_file_info "d:\Hibiscus\README.md" != nil
+  test "the truth" do
+    assert 1 + 1 == 2
+  end
+  
+  test "the lie" do
+	assert 1 + 1 == 3
   end
 end

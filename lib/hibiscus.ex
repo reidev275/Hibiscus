@@ -1,34 +1,47 @@
 defmodule Hibiscus do
-	def start() do
-		IO.puts "Hibiscus monitoring"
-		{:ok, agent} = Agent.start_link fn -> HashDict.new end
-		loop ".", agent
+
+	@dir "."
+	
+	def main(argv) do
+		start
 	end
 	
-	def loop(dir, agent, dict) do
-		File.ls!(dir)
-			|> Enum.each(fn x -> file_or_dir x, dir, agent end)
-			
-		results = Agent.get agent, fn list -> list end
-		if !HashDict.equal?(results, dict) do
-			System.cmd("mix test"
+	def start() do
+		IO.puts "Hibiscus monitoring " <> System.cwd
+		{:ok, registry} = Hibiscus.Registry.start_link
+		iterate(registry)
+	end
+	
+	defp iterate(registry) do
+		loop(@dir, registry)
+
+		if Hibiscus.Registry.changes?(registry) do
+			IO.puts "changes found. Running Tests"
+			{results, _failures} = System.cmd("mix", ["test"])
+			IO.puts results
 		end
-		Agent.stop agent
-		{:ok, agent} = Agent.start_link fn -> HashDict.new end
-		loop(".", agent, results)
+		Hibiscus.Registry.reset(registry)
+		iterate(registry)
+	end
+	
+	defp loop(dir, registry) do
+		case File.ls(dir) do
+			{:ok, files} -> Enum.each(files, fn x -> file_or_dir(x, dir, registry) end)
+			{:error, _} -> 
+		end
 	end
 
-	def file_or_dir(path, dir, agent) do
+	defp file_or_dir(path, dir, registry) do
 		if File.dir? path do
-			loop dir <> "/" <> path, agent
+			loop dir <> "/" <> path, registry
 		else
-			File.cd! dir, fn -> save_file(path, dir, agent) end
+			File.cd!(dir, fn -> save_file(path, dir, registry) end)
 		end	
 	end
 	
-	def save_file(path, dir, agent) do
-		%File.Stat{size: size} = File.stat! path
-		fullPath = Path.join dir, path
-		Agent.update agent, &HashDict.put(&1, fullPath, size)
+	defp save_file(path, dir, registry) do
+		%File.Stat{mtime: updated} = File.stat!(path)
+		fullPath = Path.join(dir, path)
+		Hibiscus.Registry.put(registry, fullPath, updated)
 	end
 end

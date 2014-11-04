@@ -5,6 +5,7 @@ defmodule Hibiscus.Mixfile do
     [app: :hibiscus,
      version: "0.0.1",
      elixir: "~> 1.0",
+	 escript: escript,
      deps: deps]
   end
 
@@ -13,6 +14,10 @@ defmodule Hibiscus.Mixfile do
   # Type `mix help compile.app` for more information
   def application do
     [applications: [:logger]]
+  end
+  
+  defp escript do
+	[ main_module: Hibiscus ]
   end
 
   # Dependencies can be Hex packages:
